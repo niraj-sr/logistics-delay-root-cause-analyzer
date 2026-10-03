@@ -369,6 +369,18 @@ if N_filtered == 0:
     )
     st.stop()
 
+# Small Sample Size Notice on main view if N < 30
+if 0 < N_filtered < 30:
+    st.markdown(
+        f"""
+        <div class="warning-box" style="margin-bottom: 20px;">
+            ⚠️ <b>Small Sample Size Notice (N = {N_filtered:,}):</b> The active slice has fewer than 30 observations.
+            Proportions and observed rates may exhibit high statistical variance.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
 # ---------------------------------------------------------
 # Dynamic KPI Calculations
 # ---------------------------------------------------------
@@ -518,6 +530,9 @@ with tab1:
                 name="On-Time Deliveries",
                 orientation="h",
                 marker=dict(color="#1f77b4"),
+                text=wh_summary["On_Time_Shipments"],
+                texttemplate="%{x:,}",
+                textposition="inside",
                 hovertemplate="<b>%{y}</b><br>On-Time: %{x:,} packages<extra></extra>",
             )
         )
@@ -528,6 +543,9 @@ with tab1:
                 name="Delayed Deliveries",
                 orientation="h",
                 marker=dict(color="#d62728"),
+                text=wh_summary["Delayed_Shipments"],
+                texttemplate="%{x:,}",
+                textposition="inside",
                 hovertemplate="<b>%{y}</b><br>Delayed: %{x:,} packages<extra></extra>",
             )
         )
@@ -537,7 +555,7 @@ with tab1:
             margin=dict(l=20, r=20, t=20, b=20),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             xaxis=dict(title="Shipment Volume", gridcolor="#f1f5f9"),
-            yaxis=dict(title=None, autorange="reversed"),
+            yaxis=dict(title=None, autorange="reversed", automargin=True),
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
         )
@@ -631,12 +649,18 @@ with tab1:
         x_title = "Observed Delay Rate (%)"
         ref_line = BASELINE_DELAY_RATE
         ref_text = f"Network Baseline ({BASELINE_DELAY_RATE:.1f}%)"
+        text_tpl = "%{x:.1f}%"
+        max_v = float(route_agg["Delay_Rate"].max()) if len(route_agg) > 0 else 50.0
+        x_max = max(max_v * 1.15, BASELINE_DELAY_RATE * 1.15)
     else:
         route_agg = route_agg.sort_values(by="Delayed", ascending=True)
         x_val = route_agg["Delayed"]
         x_title = "Delayed Shipment Count (Packages)"
         ref_line = None
         ref_text = None
+        text_tpl = "%{x:,}"
+        max_v = float(route_agg["Delayed"].max()) if len(route_agg) > 0 else 50.0
+        x_max = max_v * 1.15
 
     fig_routes = px.bar(
         route_agg,
@@ -647,7 +671,9 @@ with tab1:
         color_continuous_scale=["#2b5c8f", "#e65100", "#b71c1c"],
         labels={"Route": "Corridor", "Delay_Rate": "Delay Rate (%)"},
         hover_data={"Total": ":,", "Delayed": ":,", "Delay_Rate": ":.2f%", "Avg_Transit": ":.2f d"},
+        text=x_val,
     )
+    fig_routes.update_traces(texttemplate=text_tpl, textposition="outside")
 
     if ref_line is not None:
         fig_routes.add_vline(
@@ -660,9 +686,9 @@ with tab1:
 
     fig_routes.update_layout(
         height=580,
-        margin=dict(l=20, r=20, t=30, b=30),
-        xaxis=dict(title=x_title, gridcolor="#f1f5f9"),
-        yaxis=dict(title=None),
+        margin=dict(l=10, r=40, t=30, b=30),
+        xaxis=dict(title=x_title, range=[0, x_max], gridcolor="#f1f5f9"),
+        yaxis=dict(title=None, automargin=True),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
     )
@@ -713,7 +739,10 @@ with tab2:
             color_discrete_map={"Short": "#2b5c8f", "Medium": "#4a90e2", "Long": "#d95f02"},
             labels={"Delay_Rate": "Delay Rate (%)", "Distance_Tier": "Distance Tier"},
             hover_data={"Total": ":,", "Delayed": ":,", "Avg_Transit": ":.2f d"},
+            text="Delay_Rate",
         )
+        max_c = float(carrier_dist["Delay_Rate"].max()) if len(carrier_dist) > 0 else 40.0
+        fig_carrier.update_traces(texttemplate="%{y:.1f}%", textposition="outside")
         fig_carrier.add_hline(
             y=BASELINE_DELAY_RATE,
             line_dash="dot",
@@ -722,11 +751,11 @@ with tab2:
         )
         fig_carrier.update_layout(
             height=340,
-            margin=dict(l=20, r=20, t=20, b=20),
+            margin=dict(l=20, r=20, t=25, b=20),
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
             xaxis=dict(title=None),
-            yaxis=dict(title="Observed Delay Rate (%)", gridcolor="#f1f5f9"),
+            yaxis=dict(title="Observed Delay Rate (%)", range=[0, max(max_c * 1.20, 48)], gridcolor="#f1f5f9"),
         )
         st.plotly_chart(fig_carrier, width='stretch')
 
@@ -788,7 +817,9 @@ with tab2:
             color_discrete_map={"Short": "#2b5c8f", "Medium": "#4a90e2", "Long": "#d95f02"},
             labels={"Delay_Rate": "Delay Rate (%)", "Distance_Tier": "Distance Tier"},
             hover_data={"Total": ":,", "Delayed": ":,"},
+            text="Delay_Rate",
         )
+        fig_weather.update_traces(texttemplate="%{y:.1f}%", textposition="outside")
         fig_weather.add_hline(
             y=BASELINE_DELAY_RATE,
             line_dash="dot",
@@ -797,11 +828,11 @@ with tab2:
         )
         fig_weather.update_layout(
             height=340,
-            margin=dict(l=20, r=20, t=20, b=20),
+            margin=dict(l=20, r=20, t=25, b=20),
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
             xaxis=dict(title=None),
-            yaxis=dict(title="Observed Delay Rate (%)", gridcolor="#f1f5f9"),
+            yaxis=dict(title="Observed Delay Rate (%)", range=[0, 115], gridcolor="#f1f5f9"),
         )
         st.plotly_chart(fig_weather, width='stretch')
 
@@ -861,7 +892,10 @@ with tab2:
             color_discrete_map={"Short": "#2b5c8f", "Medium": "#4a90e2", "Long": "#d95f02"},
             labels={"Delay_Rate": "Delay Rate (%)", "Distance_Tier": "Distance Tier"},
             hover_data={"Total": ":,", "Delayed": ":,"},
+            text="Delay_Rate",
         )
+        max_tr = float(traffic_dist["Delay_Rate"].max()) if len(traffic_dist) > 0 else 35.0
+        fig_traffic.update_traces(texttemplate="%{y:.1f}%", textposition="outside")
         fig_traffic.add_hline(
             y=BASELINE_DELAY_RATE,
             line_dash="dot",
@@ -870,11 +904,11 @@ with tab2:
         )
         fig_traffic.update_layout(
             height=340,
-            margin=dict(l=20, r=20, t=20, b=20),
+            margin=dict(l=20, r=20, t=25, b=20),
             plot_bgcolor="rgba(0,0,0,0)",
             paper_bgcolor="rgba(0,0,0,0)",
             xaxis=dict(title=None),
-            yaxis=dict(title="Observed Delay Rate (%)", gridcolor="#f1f5f9"),
+            yaxis=dict(title="Observed Delay Rate (%)", range=[0, max(max_tr * 1.22, 40)], gridcolor="#f1f5f9"),
         )
         st.plotly_chart(fig_traffic, width='stretch')
 
@@ -1011,6 +1045,20 @@ with tab3:
         "Lower Severity / Lower Delayed Volume": "#546e7a",
     }
 
+    pos_map = {
+        "WH-East → LA (ExpressAir)": "top right",
+        "WH-West → NY (ExpressAir)": "top left",
+        "SwiftCargo in Storm": "top right",
+        "WH-West → NY (SwiftCargo)": "top left",
+        "WH-East → LA (SwiftCargo)": "bottom right",
+        "WH-West → NY (FastTrack)": "top left",
+        "WH-East → LA (FastTrack)": "bottom right",
+        "WH-North → Chicago (All)": "bottom center",
+        "ExpressAir in Clear Weather": "top left",
+        "FastTrack in Clear Weather": "top right",
+    }
+    matrix_df["text_pos"] = matrix_df["Segment Name"].map(pos_map).fillna("top center")
+
     fig_matrix = px.scatter(
         matrix_df,
         x="Delayed Shipments (n)",
@@ -1029,12 +1077,27 @@ with tab3:
         line_color="#333333",
         annotation_text=f"Baseline Rate ({BASELINE_DELAY_RATE:.2f}%)",
     )
-    fig_matrix.update_traces(textposition="top center", textfont=dict(size=10))
+    fig_matrix.update_traces(
+        textposition=matrix_df["text_pos"],
+        textfont=dict(size=10.5),
+        cliponaxis=False,
+    )
+
+    # 4 Descriptive Quadrant Watermark Annotations
+    quadrant_watermarks = [
+        dict(x=35, y=107, text="<b>High Severity<br>Lower Delayed Volume</b>", showarrow=False, font=dict(color="#8e24aa", size=10), align="center", opacity=0.55),
+        dict(x=140, y=107, text="<b>High Severity<br>High Delayed Volume</b>", showarrow=False, font=dict(color="#b71c1c", size=10), align="center", opacity=0.55),
+        dict(x=35, y=4, text="<b>Lower Severity<br>Lower Delayed Volume</b>", showarrow=False, font=dict(color="#546e7a", size=10), align="center", opacity=0.55),
+        dict(x=140, y=4, text="<b>Lower Severity<br>High Delayed Volume</b>", showarrow=False, font=dict(color="#2e7d32", size=10), align="center", opacity=0.55),
+    ]
+    for ann in quadrant_watermarks:
+        fig_matrix.add_annotation(ann)
+
     fig_matrix.update_layout(
-        height=480,
-        margin=dict(l=20, r=20, t=30, b=30),
-        xaxis=dict(title="Delayed Shipment Count [Volume]", gridcolor="#f1f5f9"),
-        yaxis=dict(title="Observed Delay Rate (%) [Severity]", gridcolor="#f1f5f9"),
+        height=520,
+        margin=dict(l=20, r=40, t=35, b=30),
+        xaxis=dict(title="Delayed Shipment Count [Volume]", range=[10, 225], gridcolor="#f1f5f9"),
+        yaxis=dict(title="Observed Delay Rate (%) [Severity]", range=[-5, 115], gridcolor="#f1f5f9"),
         plot_bgcolor="rgba(0,0,0,0)",
         paper_bgcolor="rgba(0,0,0,0)",
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
@@ -1229,7 +1292,7 @@ with tab4:
         search_query = st.text_input(
             "🔍 Search Shipments (by Order ID, Origin, Destination, Carrier, or Weather):",
             "",
-            placeholder="e.g. ORD-1025, Chicago, ExpressAir, Storm...",
+            placeholder="e.g. ORD-00001, Chicago, ExpressAir, Storm...",
         )
 
     # Apply Text Search if provided
