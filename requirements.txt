@@ -1,6 +1,18 @@
+# Logistics Delay Root-Cause Analyzer
+# Core Production Dependencies
+
+# Data Manipulation & Computation
 numpy>=1.26.0,<3.0.0
 pandas>=2.1.0,<3.0.0
+
+# Visualization & Statistical Graphics
 matplotlib>=3.8.0,<4.0.0
 seaborn>=0.13.0,<1.0.0
+plotly>=5.18.0
+
+# Interactive Executive Dashboard
+streamlit>=1.35.0
+
+# Notebook Execution & Kernel Environment
 jupyter>=1.0.0,<2.0.0
 ipykernel>=6.29.0

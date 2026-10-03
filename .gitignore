@@ -2,12 +2,15 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.so
 
 # Virtual Environments
 .venv/
 venv/
 env/
 ENV/
+env.bak/
+venv.bak/
 
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
@@ -16,7 +19,39 @@ ENV/
 # IDE and Editor configurations
 .vscode/
 .idea/
+*.sublime-project
+*.sublime-workspace
+*.swp
+*.swo
+*~
 
-# OS generated files
+# Operating System files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+Desktop.ini
+
+# Environment variables & local secrets
+.env
+.env.*
+!.env.example
+*.secrets
+
+# Temporary scratch & log files
+scratch/
+*.log
+*.tmp
+
+# Explicit tracking guarantees for portfolio assets
+!data/raw/shipments_raw.csv
+!data/processed/shipments_cleaned.csv
+!reports/figures/*.png
+!notebooks/*.ipynb
+!app.py
+!src/
+!README.md
+!requirements.txt
